@@ -1,0 +1,32 @@
+# Entornos virtuales
+.venv/
+venv/
+*.venv/
+*venv/
+
+# Archivos de entorno y configuración local
+.env
+*.env
+
+# Archivos de base de datos locales
+*.sqlite3
+*.db
+
+# Archivos de log y temporales
+*.log
+*.tmp
+*.bak
+
+# Archivos de caché y compilados
+__pycache__/
+*.pyc
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de dependencias generados por Docker
+*.pid
+
+# Volúmenes y datos de Docker
+docker-data/
