@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pymongo
+SQLAlchemy>=1.4
+python-dotenv
+python-jose[cryptography]
+psycopg2-binary
+pydantic
+dnspython
