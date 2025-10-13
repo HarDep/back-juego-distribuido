@@ -4,7 +4,7 @@ from mongo_database import db_mongo_manager
 import string
 import random
 import datetime
-from schemas import (GameResponse, Player, UserInfo, GameState)
+from schemas import (GameResponse, Player, UserInfo, GameState, model_from_db, model_to_db)
 
 def magane_database(func):
     def wrapper(*args, **kwargs):
@@ -27,19 +27,17 @@ def register_game(username: str, profile_id: str, rel_db: Session) -> GameRespon
                       player_name=profile.display_name, avatar_url=profile.avatar_url)]
     game_info = GameResponse(code=inv_code, created_by=created_by, players=players, 
                              state=GameState.WAITING, created_at=datetime.datetime.now())
-    info = game_info.model_dump()
+    info = model_to_db(game_info)
     res = db_mongo_manager.get_collection().insert_one(info)
-    id : str = res.inserted_id
+    id : str = str(res.inserted_id)
     game_info.id = id
     return game_info
 
 @magane_database
 def get_games(username: str, profile_id: str) -> list[GameResponse]:
     res = db_mongo_manager.get_collection().find({"players.profile_id": profile_id, 
-                                                       "players.username": username}, 
-                                                        {"created_by": 1, "state": 1, "created_at": 1,
-                                                        "started_at": 1, "finished_at": 1})
-    list = [GameResponse(**game) for game in res]
+                                                       "players.username": username})
+    list = [model_from_db(GameResponse, game) for game in res]
     return list
 
 @magane_database
@@ -49,7 +47,7 @@ def get_game(game_id: str, profile_id: str, username: str) -> GameResponse | Non
                                                       "players.username": username})
     if res is None:
         return None
-    game_info = GameResponse(**res)
+    game_info = model_from_db(GameResponse, res)
     return game_info
 
 @magane_database
@@ -61,9 +59,10 @@ def join_player(username: str, profile_id: str, invitation_code: str, rel_db: Se
         return None
     player = Player(user_id=str(profile.user_id), username=username, profile_id=str(profile.id), 
                     player_name=profile.display_name, avatar_url=profile.avatar_url)
+    player_info = model_to_db(player)
     res = db_mongo_manager.get_collection().update_one({"code": invitation_code, 
                                                         "state": GameState.WAITING}, 
-                                                 {"$push": {"players": player.model_dump()}})
+                                                 {"$push": {"players": player_info}})
     return res.modified_count > 0
 
 @magane_database
