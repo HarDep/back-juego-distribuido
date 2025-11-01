@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from database_rel import db_dependency
 from jwt_service import token_dependency
-from games_service import get_games, get_game, register_game, join_player, delete_game, change_state
+from games_service import get_games, get_game, register_game, join_player, delete_game #, change_state
 from schemas import GameResponse, Response
 
 games_control_router = APIRouter(prefix="/games", tags=["games"])
@@ -49,9 +49,9 @@ async def join_game(db: db_dependency, username: token_dependency, invitation_co
     return Response(message="Game joined")
 
 # POST /games/{game_id}/start
-@games_control_router.post("/{game_id}/start")
-async def start_game(username: token_dependency, game_id: str) -> Response:
-    res = change_state(game_id, username)
-    if not res:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game not found or finished, or you are not the creator")
-    return Response(message="Game started")
+# @games_control_router.post("/{game_id}/start")
+# async def start_game(username: token_dependency, game_id: str) -> Response:
+#     res = change_state(game_id, username)
+#     if not res:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game not found or finished, or you are not the creator")
+#     return Response(message="Game started")

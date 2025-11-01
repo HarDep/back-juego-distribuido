@@ -2,7 +2,6 @@ services:
   postgres:
     image: postgres:latest
     container_name: postgres_db
-    restart: always
     env_file:
       - .env
     environment:
@@ -17,7 +16,6 @@ services:
   mongo:
     image: mongo:latest
     container_name: mongo_db
-    restart: always
     env_file:
       - .env
     environment:

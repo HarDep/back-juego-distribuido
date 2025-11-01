@@ -1,0 +1,5 @@
+uvicorn[standard]
+pymongo
+python-dotenv
+pydantic
+python-socketio[asgi]
