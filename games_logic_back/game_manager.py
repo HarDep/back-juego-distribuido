@@ -347,13 +347,13 @@ class GameManager:
         async with self.enemies_lock:
             enemies_list = self.environment.enemies.copy()
         for prefab in enemies_list:
-            attacks = list(filter(lambda x: x.alive and x.type == "shoot", prefab.attacks))
+            attacks = list(filter(lambda x: x.alive and x.type != "melee", prefab.attacks))
             for attack in attacks:
                 self.__do_shoot_attack_move(attack)
         for prefab in self.environment.characters:
             async with self.characters_attacks_locks[prefab.id]:
                 attacks_list = prefab.attacks.copy()
-            attacks = list(filter(lambda x: x.alive and x.type == "shoot", attacks_list))
+            attacks = list(filter(lambda x: x.alive, attacks_list))
             for attack in attacks:
                 self.__do_shoot_attack_move(attack)
 
@@ -523,6 +523,8 @@ class GameManager:
                         await damage_function(character, False, shoot, en.id)
                     elif shoot.type == "melee":
                         shoot.alive = False
+                    elif shoot.x > self.environment.width or shoot.x < 0 or shoot.y > self.environment.height or shoot.y < 0:
+                        shoot.alive = False
                     if character.life <= 0:
                         await character_death_function(character)
                         list_characters = list(filter(lambda x: x.life > 0, self.environment.characters))
@@ -549,11 +551,13 @@ class GameManager:
                                 self.environment.enemies.remove(en)
                             await enemy_defeted_function(en)
                             character.character_points += 10
-                            character.total_character_points += 10                
+                            character.total_character_points += 10          
                             if character.character_points == 20:
                                 await self.__generate_chest(chest_generation_function)
                                 character.character_points = 0
                         break
+                    elif shoot.x > self.environment.width or shoot.x < 0 or shoot.y > self.environment.height or shoot.y < 0:
+                        shoot.alive = False
     
     def __get_ni_number(self, a, b):
         ri = random.random

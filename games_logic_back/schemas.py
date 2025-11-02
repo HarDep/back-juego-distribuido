@@ -98,6 +98,7 @@ class Response(BaseModel):
     game_width: int
     game_height: int
     game_won: bool = False
+    game_initialized: bool = False
 
 class WeaponInfo(BaseModel):
     model_config = base_model_config
