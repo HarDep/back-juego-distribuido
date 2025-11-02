@@ -95,6 +95,9 @@ class Response(BaseModel):
     game_id: str
     players_info: Optional[List[PlayerInfo]] = None
     success: bool = True
+    game_width: int
+    game_height: int
+    game_won: bool = False
 
 class WeaponInfo(BaseModel):
     model_config = base_model_config
@@ -130,6 +133,8 @@ class AttackInfo(BaseModel):
     type: str
     max_dimensions: dict[str, tuple[int, int]]
     attacker_id: str
+    animation_time_secs: float
+    speed_animation: int
 
 class StaticObjectInfo(BaseModel):
     model_config = base_model_config
@@ -173,9 +178,12 @@ def to_prefab_info(prefab: PrefabData) -> PrefabDataInfo:
     prefab_info["weapons"] = weapon_info
     return PrefabDataInfo(prefab_info)
 
-def to_atack_info(attack: AttackData, attacker_id: str) -> AttackInfo:
+def to_atack_info(attack: AttackData, attacker_id: str, animation_time_secs: float = 0.3, 
+                  speed_animation: int = 5) -> AttackInfo:
     attack_info = {key: value for key, value in attack.__dict__ if key != 'alive'}
     attack_info["attacker_id"] = attacker_id
+    attack_info["animation_time_secs"] = animation_time_secs
+    attack_info["speed_animation"] = speed_animation
     return AttackInfo(attack_info)
 
 def to_static_object_info(static_object: StaticObject) -> StaticObjectInfo:

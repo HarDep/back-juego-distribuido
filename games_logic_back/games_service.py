@@ -1,4 +1,4 @@
-from schemas import GameInfo, Response, GameResponse, DamageInfo, ChestOpenInfo, to_weapon_info, to_player_info, to_atack_info, to_prefab_info, to_static_object_info, to_wave_info
+from schemas import GameInfo, Response, DamageInfo, ChestOpenInfo, to_weapon_info, to_player_info, to_atack_info, to_prefab_info, to_static_object_info, to_wave_info
 from database_service import get_game, change_state
 from game_manager import GameManager
 import socketio
@@ -6,11 +6,15 @@ import asyncio
 
 games = {}
 
+DEFAULT_GAME_WIDTH = 1360
+DEFAULT_GAME_HEIGHT = 765
+
 def create_game(game_info: GameInfo, sid: str):
     game = get_game(game_info.id, game_info.user_id)
     if not game:
-        return Response(message="No se pudo crear el juego", game_id=game_info.id, success=False)
-    game_manager = GameManager(1080, 7020)
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="No se pudo crear el juego", game_id=game_info.id, success=False)
+    game_manager = GameManager(DEFAULT_GAME_WIDTH, DEFAULT_GAME_HEIGHT)
     player = game.players[0]
     game_manager.add_player(player.profile_id)
     games[game.id] = {
@@ -19,7 +23,8 @@ def create_game(game_info: GameInfo, sid: str):
         "players" : { sid: player.profile_id },
         "game_terminated" : False
     }
-    return Response(message="Juego creado", game_id=game.id, players_info=[to_player_info(player)])
+    return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="Juego creado", game_id=game.id, players_info=[to_player_info(player)])
 
 def start_all_game(game_info: GameInfo, sio: socketio.AsyncServer):
     has_change_state = change_state(game_info.id, game_info.user_id)
@@ -38,7 +43,8 @@ def start_all_game(game_info: GameInfo, sio: socketio.AsyncServer):
                                             attack_info=to_atack_info(z, w)), room=game_info.id)
         async def end_game():
             game_data["game_terminated"] = True
-            await sio.emit("game_state_update", Response(message="Juego terminado, te han derrotado", game_id=game_info.id), 
+            await sio.emit("game_state_update", Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="Juego terminado, te han derrotado", game_id=game_info.id), 
                      room=game_info.id)
         async def game_server_actions():
             while not game_data["game_terminated"]:
@@ -52,25 +58,32 @@ def start_all_game(game_info: GameInfo, sio: socketio.AsyncServer):
                                               room=game_info.id)
         async def game_won():
             game_data["game_terminated"] = True
-            await sio.emit("game_state_update", Response(message="Juego terminado, has ganado", game_id=game_info.id), 
+            await sio.emit("game_state_update", Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="Juego terminado, has ganado", game_id=game_info.id, game_won=True), 
                      room=game_info.id)
         asyncio.create_task(manager.generate_waves_and_enemies(enemy_gen_func, new_wave_func, game_won))
         asyncio.create_task(game_server_actions())
-        return Response(message="Partida iniciada", game_id=game_info.id)
-    return Response(message="No se pudo iniciar el juego", game_id=game_info.id, success=False)
+        # TODO: guardar datos en la DB segun la info que se necesite o cuando se deba guardar
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="Partida iniciada", game_id=game_info.id)
+    return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="No se pudo iniciar el juego", game_id=game_info.id, success=False)
 
 def terminate_game(game_info: GameInfo):
     game = get_game(game_info.id, game_info.user_id)
     if not game:
-        return Response(message="No existe el juego, o ya esta en curso", game_id=game_info.id, 
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="No existe el juego, o ya esta en curso", game_id=game_info.id, 
                         success=False)
     del games[game.id]
-    return Response(message="Juego terminado", game_id=game.id)
+    return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="Juego terminado", game_id=game.id)
 
 def add_player(game_info: GameInfo, sid: str):
-    game: GameResponse = get_game(game_info.id, game_info.user_id, creator=False)
+    game = get_game(game_info.id, game_info.user_id, creator=False)
     if not game:
-        return Response(message="No existe el juego, o ya esta en curso", game_id=game_info.id, 
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="No existe el juego, o ya esta en curso", game_id=game_info.id, 
                         success=False)
     if sid not in games[game.id]["players"]:
         player = list(filter(lambda x: x.user_id == game_info.user_id, game.players))[0]
@@ -78,14 +91,17 @@ def add_player(game_info: GameInfo, sid: str):
         game_manager: GameManager = games[game.id]["manager"]
         game_manager.add_player(player.profile_id)
         players = [ to_player_info(x) for x in game.players ]
-        return Response(message="Jugador agregado", game_id=game.id, players_info=players)
-    return Response(message="El jugador ya se encuentra en el juego", game_id=game.id, success=False)
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="Jugador agregado", game_id=game.id, players_info=players)
+    return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="El jugador ya se encuentra en el juego", game_id=game.id, success=False)
 
 def move_player(move_direction:str, sid:str, game_id:str):
     game_manager: GameManager = games[game_id]["manager"]
     player = game_manager.move_player(games[game_id]["players"][sid], move_direction)
     if not player:
-        return Response(message="No se pudo mover el jugador", game_id=game_id, success=False)
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="No se pudo mover el jugador", game_id=game_id, success=False)
     return to_prefab_info(player)
 
 def do_player_shoot(sid: str, game_id: str):
@@ -93,7 +109,8 @@ def do_player_shoot(sid: str, game_id: str):
     id: str = games[game_id]["players"][sid]
     data = game_manager.do_player_shoot(id)
     if not data:
-        return Response(message="No se pudo disparar", game_id=game_id, success=False)
+        return Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
+                    message="No se pudo disparar", game_id=game_id, success=False)
     return to_atack_info(data, id)
 
 async def do_chest_selection(sid: str, game_id: str, sio: socketio.AsyncServer):

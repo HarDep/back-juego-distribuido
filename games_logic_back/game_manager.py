@@ -320,7 +320,6 @@ class GameManager:
         self.environment.add_enemy(enemy)
         return enemy
 
-    # !!!!
     def do_player_shoot(self, id: str):
         for character in self.environment.characters:
             if character.id == id and character.life > 0:
@@ -344,7 +343,6 @@ class GameManager:
             self.attack_count_id += 1
         return data
 
-    # !!!!
     async def move_shoots_attacks(self):
         async with self.enemies_lock:
             enemies_list = self.environment.enemies.copy()
@@ -369,7 +367,6 @@ class GameManager:
         elif attack.direction == "down":
             attack.y += 10
 
-    # !!!!
     async def evaluate_character_position_action(self, attack_function: Callable[[str, AttackData], Awaitable[None]], 
                                            move_function: Callable[[PrefabData], Awaitable[None]],
                                            enemy_generation_function: Callable[[PrefabData], Awaitable[None]]):
@@ -508,7 +505,6 @@ class GameManager:
         euclidean_distance = math.sqrt((ob_x - x) ** 2 + (ob_y - y) ** 2)
         return euclidean_distance <= x_width * 1.5
 
-    # !!!!
     async def evaluate_attacks(self, chest_generation_function: Callable[[StaticObject], Awaitable[None]], 
                          enemy_defeted_function: Callable[[PrefabData], Awaitable[None]], 
                          character_death_function: Callable[[PrefabData], Awaitable[None]], 
