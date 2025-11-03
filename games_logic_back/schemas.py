@@ -31,9 +31,9 @@ class UserInfo(BaseModel):
 
 class WaveData(BaseModel):
     model_config = base_model_config
-    ememy_shadow_defeated: int = 0
-    ememy_strange_shadow_defeated: int = 0
-    ememy_special_shadow_defeated: int = 0
+    enemy_shadow_defeated: int = 0
+    enemy_strange_shadow_defeated: int = 0
+    enemy_special_shadow_defeated: int = 0
 
 class FinalWaveData(WaveData):
     boss_defeated: bool = False
@@ -51,7 +51,6 @@ class Player(BaseModel):
     second_wave_data: Optional[WaveData] = None
     third_wave_data: Optional[WaveData] = None
     final_wave_data: Optional[FinalWaveData] = None
-
 
 class PlayerInfo(BaseModel):
     model_config = base_model_config

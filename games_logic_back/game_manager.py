@@ -240,9 +240,9 @@ class GameManager:
             await chest_generation_function(chest)
 
     async def generate_waves_and_enemies(self, enemy_generation_function: Callable[[PrefabData], Awaitable[None]],
-                          new_wave_function: Callable[[str, bool, list[PrefabData] | None, list[StaticObject] | None], Awaitable[None]], 
+                          new_wave_function: Callable[[int, bool, list[PrefabData] | None, list[StaticObject] | None], Awaitable[None]], 
                           game_won_function: Callable[[], Awaitable[None]]):
-        await new_wave_function("1", False, self.environment.characters.copy(), 
+        await new_wave_function(1, False, self.environment.characters.copy(), 
                                 self.environment.static_objects.copy())
         for i in range(1, self.waves + 1):
             await sleep(self.waves_waiting_time)
@@ -255,12 +255,12 @@ class GameManager:
                 if self.terminate:
                     return
             else:
-                await new_wave_function(f"{i + 1}", i + 1 > self.waves, None, None)
+                await new_wave_function(i + 1, i + 1 > self.waves, None, None)
         await sleep(60)
         async with self.static_objects_lock:
             self.environment.static_objects.clear()
             self.__generate_torches()
-            await new_wave_function("final", False, self.environment.characters.copy(), 
+            await new_wave_function(4, False, self.environment.characters.copy(), 
                                     self.environment.static_objects.copy())
         await enemy_generation_function(self.__generate_final_enemy())
         while len(self.environment.enemies) > 0:
@@ -506,7 +506,7 @@ class GameManager:
         return euclidean_distance <= x_width * 1.5
 
     async def evaluate_attacks(self, chest_generation_function: Callable[[StaticObject], Awaitable[None]], 
-                         enemy_defeted_function: Callable[[PrefabData], Awaitable[None]], 
+                         enemy_defeted_function: Callable[[PrefabData, str], Awaitable[None]], 
                          character_death_function: Callable[[PrefabData], Awaitable[None]], 
                          game_over_function: Callable[[], Awaitable[None]], 
                          damage_function: Callable[[PrefabData, bool, AttackData, str], Awaitable[None]]):
@@ -549,7 +549,7 @@ class GameManager:
                         if en.life <= 0:
                             async with self.enemies_lock:
                                 self.environment.enemies.remove(en)
-                            await enemy_defeted_function(en)
+                            await enemy_defeted_function(en, character.id)
                             character.character_points += 10
                             character.total_character_points += 10          
                             if character.character_points == 20:

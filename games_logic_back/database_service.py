@@ -1,5 +1,5 @@
 from mongo_database import db_mongo_manager
-from schemas import GameResponse, GameState, model_from_db
+from schemas import GameResponse, GameState, model_from_db, model_to_db
 
 def magane_database(func):
     def wrapper(*args, **kwargs):
@@ -24,4 +24,10 @@ def change_state(game_id: str, user_id: str) -> bool:
                                                   "created_by.user_id": user_id, 
                                                   "state": GameState.WAITING}, 
                                                   {"$set": {"state": GameState.IN_PROGRESS}})
+    return res.modified_count > 0
+
+@magane_database
+def update_game(game: GameResponse):
+    dict_inf = model_to_db(game)
+    res = db_mongo_manager.get_collection().update_one({"_id": game.id}, {"$set": dict_inf})
     return res.modified_count > 0

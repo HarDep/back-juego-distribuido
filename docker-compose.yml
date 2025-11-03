@@ -60,3 +60,19 @@ services:
       TOKEN_URL: ${TOKEN_URL}
     ports:
       - "${GAMES_CONTROL_PORT}:8001"
+    restart: always
+
+  games_logic_back:
+    build: ./games_logic_back
+    container_name: games_logic_back
+    depends_on:
+      - postgres
+      - mongo
+    env_file:
+      - .env
+    environment:
+      MONGO_URL: ${MONGO_URL}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_COLLECTION_NAME: ${MONGO_COLLECTION_NAME}
+    ports:
+      - "${GAMES_LOGIC_PORT}:8002"
