@@ -60,7 +60,6 @@ services:
       TOKEN_URL: ${TOKEN_URL}
     ports:
       - "${GAMES_CONTROL_PORT}:8001"
-    restart: always
 
   games_logic_back:
     build: ./games_logic_back

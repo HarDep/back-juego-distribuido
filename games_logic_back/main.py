@@ -1,9 +1,11 @@
 import socketio
+from aiohttp import web
 from schemas import validate_data, GameInfo, PlayerAction, PrefabDataInfo, AttackInfo, WeaponActionResponse
 from games_service import create_game, do_weapon_player_action, start_all_game, terminate_game, add_player, move_player, do_player_shoot, do_chest_selection
 
 sio = socketio.AsyncServer(cors_allowed_origins="*")
-app = socketio.ASGIApp(sio)
+app = web.Application()
+sio.attach(app)
 
 async def on_error_data(sid, errors):
     print(f"❌ Datos inválidos: {errors}")
@@ -25,9 +27,9 @@ async def register_game(sid: str, data: dict):
     res = create_game(game_info, sid)
     if res.success:
         await sio.enter_room(sid, res.game_id)
-        await sio.emit("game_state_update", res, to=sid)
+        await sio.emit("game_state_update", res.model_dump(exclude_none=True), to=sid)
     else:
-        await sio.emit("error", res, to=sid)
+        await sio.emit("error", res.model_dump(exclude_none=True), to=sid)
 
 @sio.event
 async def start_game(sid, data):
@@ -36,9 +38,9 @@ async def start_game(sid, data):
         return
     res = start_all_game(game_info, sio)
     if res.success:
-        await sio.emit("game_state_update", res, room=game_info.id)
+        await sio.emit("game_state_update", res.model_dump(exclude_none=True), room=game_info.id)
     else:
-        await sio.emit("error", res, to=sid)
+        await sio.emit("error", res.model_dump(exclude_none=True), to=sid)
 
 @sio.event
 async def cancel_game(sid, data):
@@ -48,9 +50,9 @@ async def cancel_game(sid, data):
     res = terminate_game(game_info)
     if res.success:
         await sio.close_room(res.game_id)
-        await sio.emit("game_state_update", res, room=game_info.id)
+        await sio.emit("game_state_update", res.model_dump(exclude_none=True), room=game_info.id)
     else:
-        await sio.emit("error", res, to=sid)
+        await sio.emit("error", res.model_dump(exclude_none=True), to=sid)
 
 @sio.event
 async def player_join(sid, data):
@@ -60,9 +62,9 @@ async def player_join(sid, data):
     res = add_player(game_info, sid)
     if res.success:
         await sio.enter_room(sid, res.game_id)
-        await sio.emit("player_join", res, room=game_info.id)
+        await sio.emit("player_join", res.model_dump(exclude_none=True), room=game_info.id)
     else:
-        await sio.emit("error", res, to=sid)
+        await sio.emit("error", res.model_dump(exclude_none=True), to=sid)
 
 @sio.event
 async def player_move(sid, data):
@@ -71,9 +73,9 @@ async def player_move(sid, data):
         return
     res = move_player(info.direction, sid, info.game_id)
     if isinstance(res, PrefabDataInfo):
-        await sio.emit("player_move", res, room=info.game_id)
+        await sio.emit("player_move", res.model_dump(exclude_none=True), room=info.game_id)
     else:
-        await sio.emit("error", res, to=sid)
+        await sio.emit("error", res.model_dump(exclude_none=True), to=sid)
 
 @sio.event
 async def player_shoot(sid, data):
@@ -82,9 +84,9 @@ async def player_shoot(sid, data):
         return
     res = do_player_shoot(sid, info.game_id)
     if isinstance(res, AttackInfo):
-        await sio.emit("player_shoot", res, room=info.game_id)
+        await sio.emit("player_shoot", res.model_dump(exclude_none=True), room=info.game_id)
     else:
-        await sio.emit("error", res, to=sid)
+        await sio.emit("error", res.model_dump(exclude_none=True), to=sid)
 
 @sio.event
 async def chest_selection(sid, data):
@@ -101,4 +103,7 @@ async def weapon_action(sid, data):
     res = do_weapon_player_action(info.weapon_action, sid, info.game_id)
     if res:
         await sio.emit("weapon_action", WeaponActionResponse(action=info.weapon_action, 
-                                                             weapon_info=res), room=info.game_id)
+                                                             weapon_info=res).model_dump(exclude_none=True), room=info.game_id)
+
+if __name__ == '__main__':
+    web.run_app(app, host='0.0.0.0', port=8002)

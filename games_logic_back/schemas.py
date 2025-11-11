@@ -96,7 +96,7 @@ class Response(BaseModel):
     success: bool = True
     game_width: int
     game_height: int
-    game_won: bool = False
+    game_won: bool | None = None
     game_initialized: bool = False
 
 class WeaponInfo(BaseModel):
@@ -169,26 +169,26 @@ class WeaponActionResponse(BaseModel):
     weapon_info: WeaponInfo
 
 def to_weapon_info(weapon: Weapon) -> WeaponInfo:
-    weapon_info = {key: value for key, value in weapon.__dict__ if key != 'bullet_damage'}
-    return WeaponInfo(weapon_info)
+    weapon_info = {key: value for key, value in weapon.__dict__.items() if key != 'bullet_damage'}
+    return WeaponInfo(**weapon_info)
 
 def to_prefab_info(prefab: PrefabData) -> PrefabDataInfo:
     weapon_info = [to_weapon_info(weapon) for weapon in prefab.weapons]
-    prefab_info = {key: value for key, value in prefab.__dict__ if key not in ['attacks', 'weapons', 'in_strategy', 'speed', 'generation_enemies_counter', 'character_points', 'total_character_points']}
+    prefab_info = {key: value for key, value in prefab.__dict__.items() if key not in ['attacks', 'weapons', 'in_strategy', 'speed', 'generation_enemies_counter', 'character_points', 'total_character_points']}
     prefab_info["weapons"] = weapon_info
-    return PrefabDataInfo(prefab_info)
+    return PrefabDataInfo(**prefab_info)
 
 def to_atack_info(attack: AttackData, attacker_id: str, animation_time_secs: float = 0.3, 
                   speed_animation: int = 5) -> AttackInfo:
-    attack_info = {key: value for key, value in attack.__dict__ if key != 'alive'}
+    attack_info = {key: value for key, value in attack.__dict__.items() if key != 'alive'}
     attack_info["attacker_id"] = attacker_id
     attack_info["animation_time_secs"] = animation_time_secs
     attack_info["speed_animation"] = speed_animation
-    return AttackInfo(attack_info)
+    return AttackInfo(**attack_info)
 
 def to_static_object_info(static_object: StaticObject) -> StaticObjectInfo:
-    static_object_info = { key: value for key, value in static_object.__dict__ }
-    return StaticObjectInfo(static_object_info)
+    static_object_info = { key: value for key, value in static_object.__dict__.items() }
+    return StaticObjectInfo(**static_object_info)
 
 def to_player_info(player: Player) -> PlayerInfo:
     return PlayerInfo(**player.model_dump(exclude_none=True))

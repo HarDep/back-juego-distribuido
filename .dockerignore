@@ -1,11 +1,17 @@
 # Ignorar entornos virtuales
 .venv/
 venv/
+*.venv/
+*venv/
+
+# Ignorar archivos compilados
 __pycache__/
+*__pycache__/
 *.pyc
 
 # Ignorar archivos de entorno
 .env
+*.env
 
 # Ignorar archivos de configuración local
 *.sqlite3

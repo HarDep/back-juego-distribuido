@@ -4,6 +4,7 @@ from mongo_database import db_mongo_manager
 import string
 import random
 import datetime
+from bson.objectid import ObjectId
 from schemas import (GameResponse, Player, UserInfo, GameState, model_from_db, model_to_db)
 
 def magane_database(func):
@@ -42,7 +43,7 @@ def get_games(username: str, profile_id: str) -> list[GameResponse]:
 
 @magane_database
 def get_game(game_id: str, profile_id: str, username: str) -> GameResponse | None:
-    res = db_mongo_manager.get_collection().find_one({"_id": game_id, 
+    res = db_mongo_manager.get_collection().find_one({"_id": ObjectId(game_id), 
                                                       "players.profile_id": profile_id, 
                                                       "players.username": username})
     if res is None:
@@ -67,7 +68,7 @@ def join_player(username: str, profile_id: str, invitation_code: str, rel_db: Se
 
 @magane_database
 def change_state(game_id: str, username: str) -> bool:
-    res = db_mongo_manager.get_collection().update_one({"_id": game_id, 
+    res = db_mongo_manager.get_collection().update_one({"_id": ObjectId(game_id), 
                                                   "created_by.username": username, 
                                                   "state": GameState.WAITING}, 
                                                   {"$set": {"state": GameState.IN_PROGRESS}})
@@ -75,7 +76,7 @@ def change_state(game_id: str, username: str) -> bool:
 
 @magane_database
 def delete_game(game_id: str, username: str) -> bool:
-    res = db_mongo_manager.get_collection().delete_one({"_id": game_id, 
+    res = db_mongo_manager.get_collection().delete_one({"_id": ObjectId(game_id), 
                                                         "created_by.username": username, 
                                                         "$not": {"state": GameState.FINISHED}})
     return res.deleted_count > 0

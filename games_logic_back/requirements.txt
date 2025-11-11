@@ -1,5 +1,7 @@
-uvicorn[standard]
-pymongo
-python-dotenv
+aiohttp
+websockets
+python-engineio
+python-socketio
 pydantic
-python-socketio[asgi]
+python-dotenv
+pymongo

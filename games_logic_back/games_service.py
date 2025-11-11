@@ -44,18 +44,17 @@ def start_all_game(game_info: GameInfo, sio: socketio.AsyncServer):
         game_schema.final_game_data = FinalGameData()
         manager : GameManager = game_data["manager"]
         manager.generate_player_weapons()
-        attack_func = lambda x, y: sio.emit("enemy_attack", to_atack_info(y, x), room=game_info.id)
-        move_func = lambda x: sio.emit("enemy_move", to_prefab_info(x), room=game_info.id)
-        enemy_gen_func = lambda x: sio.emit("enemy_spawn", to_prefab_info(x), room=game_info.id)
-        chest_gen_func = lambda x: sio.emit("chest_generated", to_static_object_info(x), room=game_info.id)
+        attack_func = lambda x, y: sio.emit("enemy_attack", to_atack_info(y, x).model_dump(exclude_none=True), room=game_info.id)
+        move_func = lambda x: sio.emit("enemy_move", to_prefab_info(x).model_dump(exclude_none=True), room=game_info.id)
+        enemy_gen_func = lambda x: sio.emit("enemy_spawn", to_prefab_info(x).model_dump(exclude_none=True), room=game_info.id)
+        chest_gen_func = lambda x: sio.emit("chest_generated", to_static_object_info(x).model_dump(exclude_none=True), room=game_info.id)
         async def on_enemy_defeated(x: PrefabData, id:str):
-            await sio.emit("enemy_defeated", to_prefab_info(x), room=game_info.id)
+            await sio.emit("enemy_defeated", to_prefab_info(x).model_dump(exclude_none=True), room=game_info.id)
             game_schema.final_game_data.enemies_defeated += 1
             player_info = list(filter(lambda x: x.profile_id == id, game_schema.players))[0]
             player_info.total_kills += 1
             player_info.score += 10
-            wave_name = "first_wave_data" if game_schema.final_game_data.waves_completed == 1 else "second_wave_data" if game_schema.final_game_data.waves_completed == 2 else "third_wave_data"
-            wave_info: WaveData | FinalWaveData = player_info[wave_name]
+            wave_info: WaveData | FinalWaveData = player_info.first_wave_data if game_schema.final_game_data.waves_completed == 1 else player_info.second_wave_data if game_schema.final_game_data.waves_completed == 2 else player_info.third_wave_data if game_schema.final_game_data.waves_completed == 3 else player_info.final_wave_data
             if x.type == "final":
                 game_schema.final_game_data.boss_defeated = True
                 player_info.final_wave_data.boss_defeated = True
@@ -66,16 +65,16 @@ def start_all_game(game_info: GameInfo, sio: socketio.AsyncServer):
             elif x.type == "type3":
                 wave_info.enemy_special_shadow_defeated += 1
         async def on_player_defeated(x: PrefabData):
-            await sio.emit("player_defeated", to_prefab_info(x), room=game_info.id)
+            await sio.emit("player_defeated", to_prefab_info(x).model_dump(exclude_none=True), room=game_info.id)
             defeated_list.append(x.id)
         damage_func = lambda x, y, z, w: sio.emit("enemy" if y else "player" + "_damage", DamageInfo(
                                             prefab_info=to_prefab_info(x), 
-                                            attack_info=to_atack_info(z, w)), room=game_info.id)
+                                            attack_info=to_atack_info(z, w)).model_dump(exclude_none=True), room=game_info.id)
         async def end_game(won: bool):
             game_data["game_terminated"] = True
             await sio.emit("game_state_update", Response(game_width=DEFAULT_GAME_WIDTH, game_height=DEFAULT_GAME_HEIGHT, 
                     message=f"Juego terminado, {"has ganado" if won else "te han derrotado"}", game_id=game_info.id, 
-                    game_initialized=True, game_won=won), room=game_info.id)
+                    game_initialized=True, game_won=won).model_dump(exclude_none=True), room=game_info.id)
             game_schema.finished_at = datetime.datetime.now()
             game_schema.state = GameState.FINISHED
             save_game_data(game_schema)
@@ -89,12 +88,13 @@ def start_all_game(game_info: GameInfo, sio: socketio.AsyncServer):
                 await asyncio.sleep(0.3)
         async def on_wave_func(x, y, z, w):
             wave = str(x) if x != 4 else "final"
-            await sio.emit("wave_start", to_wave_info(wave, y, z, w), room=game_info.id)
+            await sio.emit("wave_start", to_wave_info(wave, y, z, w).model_dump(exclude_none=True), room=game_info.id)
             game_schema.final_game_data.waves_completed = x
             for ply in game_schema.players:
                 if x in [1, 2, 3] and ply.profile_id not in defeated_list:
-                    name = "first_wave_data" if x == 1 else "second_wave_data" if x == 2 else "third_wave_data"
-                    ply[name] = WaveData()
+                    wave_info: WaveData | None = ply.first_wave_data if x == 1 else ply.second_wave_data if x == 2 else ply.third_wave_data
+                    if not wave_info:
+                        wave_info = WaveData()
                 elif not ply.final_wave_data and ply.profile_id not in defeated_list:
                     ply.final_wave_data = FinalWaveData()
         asyncio.create_task(manager.generate_waves_and_enemies(enemy_gen_func, on_wave_func, lambda: end_game(True)))
@@ -159,7 +159,7 @@ async def do_chest_selection(sid: str, game_id: str, sio: socketio.AsyncServer):
             chest_info = ChestOpenInfo(id=chest.id, type=chest.chest_type, prefab_info=to_prefab_info(res))
         else:
             chest_info = ChestOpenInfo(id=chest.id, type=chest.chest_type, weapon_info=to_weapon_info(res))
-        await sio.emit("chest_open", chest_info, room=game_id)
+        await sio.emit("chest_open", chest_info.model_dump(exclude_none=True), room=game_id)
 
 def do_weapon_player_action(action:str, sid: str, game_id: str):
     game_manager: GameManager = games[game_id]["manager"]

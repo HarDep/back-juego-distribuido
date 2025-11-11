@@ -276,7 +276,7 @@ class GameManager:
             en= self.__generate_enemy()
             await enemy_generation_function(en)
             enemy_counter += 1
-            ri = random.random
+            ri = random.random()
             segs = self.waiting_lines_arrival.next_arrival_interval_time(ri) * 60 # minutos a segundos
             await sleep(segs)
 
@@ -290,7 +290,7 @@ class GameManager:
         return enemy
 
     def __get_montecarlo_enemy_position(self):
-        num = random.random
+        num = random.random()
         height = self.environment.height
         width = self.environment.width
         position_distribution = [
@@ -303,7 +303,7 @@ class GameManager:
         return selected_position()
 
     def __get_montecarlo_enemy(self):
-        num = random.random
+        num = random.random()
         enemy_distribution = [
             (("type1", 150, 7), 0.45),
             (("type2", 125, 9), 0.35),
@@ -458,7 +458,7 @@ class GameManager:
     directions = ["left", "up", "right", "down"]
     
     def __two_dimension_random_walk(self):
-        return random_choice(self.directions, rand_num=random.random)
+        return random_choice(self.directions, rand_num=random.random())
 
     def __calculate_melee_attack(self, enemy: PrefabData, 
                                  observation_space: list[tuple[int, int, int, int, int, int]]):
@@ -560,7 +560,7 @@ class GameManager:
                         shoot.alive = False
     
     def __get_ni_number(self, a, b):
-        ri = random.random
+        ri = random.random()
         return a + (b - a) * ri
     
     def __verify_shoot_damage(self, shoot: AttackData, to: PrefabData, is_enemy: bool)-> bool:
@@ -598,7 +598,7 @@ class GameManager:
         return False, 0
     
     def __get_montecarlo_damage(self):
-        num = random.random
+        num = random.random()
         damage_distribution = [
             (2, 0.5),   # 50% probabilidad de hacer 2 de daño
             (1, 0.35),  # 35% probabilidad de hacer 1 de daño
@@ -607,7 +607,7 @@ class GameManager:
         return montecarlo(damage_distribution, num)
         
     def __get_montecarlo_weapon(self):
-        num = random.random
+        num = random.random()
         weapon_distribution = [
             ("submachine", 0.5),
             ("rifle", 0.3),
@@ -640,7 +640,7 @@ class GameManager:
         )
 
     def __get_reward(self):
-        num = random.random
+        num = random.random()
         self.chain.set_state(num)
         return self.chain.current_state.value
         
