@@ -184,14 +184,14 @@ class GameManager:
                 return character
         return None
 
-    def __move_enemy(self, id: int, direction: str):
+    def __move_enemy(self, id: str, direction: str):
         for enemy in self.environment.enemies:
             if enemy.id == id:
                 restriccions = [
-                    enemy.y >= enemy.speed,
-                    enemy.y <= self.environment.height - enemy.speed,
-                    enemy.x >= enemy.speed,
-                    enemy.x <= self.environment.width - enemy.speed
+                    enemy.x < enemy.speed,
+                    enemy.x > self.environment.width - enemy.speed,
+                    enemy.y < enemy.speed,
+                    enemy.y > self.environment.height - enemy.speed
                 ]
                 enemy.frame_direction = direction
                 if direction != 'right' and direction != 'left':
@@ -201,13 +201,13 @@ class GameManager:
 
     def __move_prefab(self, prefab: PrefabData, direction: str, restriccions : list[bool]):
         prefab.direction = direction
-        if direction == "up" and restriccions[2]:
+        if direction == "up" and (not restriccions[2]):
             prefab.y -= prefab.speed
-        elif direction == "down" and restriccions[3]:
+        elif direction == "down" and (not restriccions[3]):
             prefab.y += prefab.speed
-        elif direction == "left" and restriccions[0]:
+        elif direction == "left" and (not restriccions[0]):
             prefab.x -= prefab.speed
-        elif direction == "right" and restriccions[1]:
+        elif direction == "right" and (not restriccions[1]):
             prefab.x += prefab.speed
 
     def __generate_torches(self):
@@ -225,16 +225,17 @@ class GameManager:
     async def __generate_chest(self, chest_generation_function: Callable[[StaticObject], Awaitable[None]]):
         if len(self.environment.static_objects) - 4 < len(self.chest_generation_points):
             type = self.__get_chest_type()
-            x, y = self.chest_generation_points[self.__get_ni_number(0, len(self.chest_generation_points) - 1)]
+            x, y = self.chest_generation_points[int(self.__get_ni_number(0, len(self.chest_generation_points)))]
             async with self.static_objects_lock:
                 static_ob_list = self.environment.static_objects.copy()
             chests = list(filter(lambda x: x.chest_type is not None and x.x == int(x) and x.y == int(y), static_ob_list))
             while len(chests) > 0:
-                x, y = self.chest_generation_points[self.__get_ni_number(0, len(self.chest_generation_points) - 1)]
+                x, y = self.chest_generation_points[int(self.__get_ni_number(0, len(self.chest_generation_points)))]
                 async with self.static_objects_lock:
                     static_ob_list = self.environment.static_objects.copy()
                 chests = list(filter(lambda x: x.chest_type is not None and x.x == int(x) and x.y == int(y), static_ob_list))
-            chest = StaticObject(int(x), int(y), type)
+            chest = StaticObject(self.static_objects_index, int(x), int(y), type)
+            self.static_objects_index += 1
             async with self.static_objects_lock:
                 self.environment.static_objects.append(chest)
             await chest_generation_function(chest)
@@ -258,10 +259,10 @@ class GameManager:
                 await new_wave_function(i + 1, i + 1 > self.waves, None, None)
         await sleep(60)
         async with self.static_objects_lock:
-            self.environment.static_objects.clear()
-            self.__generate_torches()
-            await new_wave_function(4, False, self.environment.characters.copy(), 
-                                    self.environment.static_objects.copy())
+            self.environment.static_objects.clear()#
+            self.__generate_torches()#
+            await new_wave_function(4, False, self.environment.characters.copy(), #
+                                self.environment.static_objects.copy())
         await enemy_generation_function(self.__generate_final_enemy())
         while len(self.environment.enemies) > 0:
             if self.terminate:
@@ -324,9 +325,12 @@ class GameManager:
         for character in self.environment.characters:
             if character.id == id and character.life > 0:
                 current_weapon = character.weapons[character.current_weapon_index]
+                if current_weapon.remaining_munition == 0:
+                    return None, None
                 data = self.__do_prefab_attack(character, "shoot", current_weapon.bullet_damage, is_enemy=False)
-                return data
-        return None
+                current_weapon.remaining_munition -= 1
+                return data, character
+        return None, None
 
     def __do_prefab_attack(self, prefab: PrefabData, type: str, damage: int, is_enemy: bool = True):
         if type == "melee":
@@ -343,29 +347,34 @@ class GameManager:
             self.attack_count_id += 1
         return data
 
-    async def move_shoots_attacks(self):
+    async def move_shoots_attacks(self, shoots_move_func: Callable[[list[AttackData], list[AttackData]], Awaitable[None]]):
+        enemies_shoots_list = []
         async with self.enemies_lock:
             enemies_list = self.environment.enemies.copy()
         for prefab in enemies_list:
             attacks = list(filter(lambda x: x.alive and x.type != "melee", prefab.attacks))
             for attack in attacks:
                 self.__do_shoot_attack_move(attack)
+            enemies_shoots_list.extend(attacks)
+        players_shoots_list = []
         for prefab in self.environment.characters:
             async with self.characters_attacks_locks[prefab.id]:
                 attacks_list = prefab.attacks.copy()
             attacks = list(filter(lambda x: x.alive, attacks_list))
             for attack in attacks:
                 self.__do_shoot_attack_move(attack)
+            players_shoots_list.extend(attacks)
+        await shoots_move_func(enemies_shoots_list, players_shoots_list)
 
     def __do_shoot_attack_move(self, attack: AttackData):
         if attack.direction == "right":
-            attack.x += 10
+            attack.x += 50
         elif attack.direction == "left":
-            attack.x -= 10
+            attack.x -= 50
         elif attack.direction == "up":
-            attack.y -= 10
+            attack.y -= 50
         elif attack.direction == "down":
-            attack.y += 10
+            attack.y += 50
 
     async def evaluate_character_position_action(self, attack_function: Callable[[str, AttackData], Awaitable[None]], 
                                            move_function: Callable[[PrefabData], Awaitable[None]],
@@ -390,7 +399,7 @@ class GameManager:
                 data = self.__do_prefab_attack(en, type_action, damage, is_enemy=True)
                 await attack_function(en.id, data)
             else:
-                self.__move_enemy(en, type_action)
+                self.__move_enemy(en.id, type_action)
                 await move_function(en)
 
     def __get_nearlest_player(self, observation_space: list[tuple[int, int, int, int, int, int]], 

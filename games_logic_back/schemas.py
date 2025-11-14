@@ -130,6 +130,7 @@ class AttackInfo(BaseModel):
     y: int
     damage: int
     direction: str
+    alive: bool
     type: str
     max_dimensions: dict[str, tuple[int, int]]
     attacker_id: str
@@ -156,9 +157,19 @@ class DamageInfo(BaseModel):
     attack_info: AttackInfo
     prefab_info: PrefabDataInfo
 
+class ShootInfo(BaseModel):
+    model_config = base_model_config
+    attack_info: AttackInfo
+    prefab_info: PrefabDataInfo
+
+class ShootMoveInfo(BaseModel):
+    model_config = base_model_config
+    enemies_attacks: List[AttackInfo]
+    players_attacks: List[AttackInfo]
+
 class ChestOpenInfo(BaseModel):
     model_config = base_model_config
-    id: str
+    id: int
     prefab_info: Optional[PrefabDataInfo] = None
     weapon_info: Optional[WeaponInfo] = None
     type: str
@@ -179,8 +190,8 @@ def to_prefab_info(prefab: PrefabData) -> PrefabDataInfo:
     return PrefabDataInfo(**prefab_info)
 
 def to_atack_info(attack: AttackData, attacker_id: str, animation_time_secs: float = 0.3, 
-                  speed_animation: int = 5) -> AttackInfo:
-    attack_info = {key: value for key, value in attack.__dict__.items() if key != 'alive'}
+                  speed_animation: int = 10) -> AttackInfo:
+    attack_info = {key: value for key, value in attack.__dict__.items()}
     attack_info["attacker_id"] = attacker_id
     attack_info["animation_time_secs"] = animation_time_secs
     attack_info["speed_animation"] = speed_animation
