@@ -172,18 +172,18 @@ def do_player_shoot(sid: str, game_id: str):
                     game_initialized=True)
     return ShootInfo(attack_info=to_atack_info(data, id), prefab_info=to_prefab_info(player_info))
 
-async def do_chest_selection(sid: str, game_id: str, sio: socketio.AsyncServer):
+def do_chest_selection(sid: str, game_id: str, sio: socketio.AsyncServer):
     game_manager: GameManager = games[game_id]["manager"]
-    data = await game_manager.open_chest(games[game_id]["players"][sid])
-    if data:
-        chest, res = data
-        if chest.chest_type == "health":
+    async def open_chest_func(chest, res):
+        if chest.chest_type in ["munition", "health"]:
             chest_info = ChestOpenInfo(id=chest.id, type=chest.chest_type, prefab_info=to_prefab_info(res))
         else:
             chest_info = ChestOpenInfo(id=chest.id, type=chest.chest_type, weapon_info=to_weapon_info(res))
         data = chest_info.model_dump(exclude_none=True)
         await sio.emit("chest_open", data, room=game_id)
         print("chest_open:", data)
+    asyncio.create_task(game_manager.open_chest(games[game_id]["players"][sid], open_chest_func)) #TODO con asincio
+    
 
 def do_weapon_player_action(action:str, sid: str, game_id: str):
     game_manager: GameManager = games[game_id]["manager"]

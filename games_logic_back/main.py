@@ -106,7 +106,7 @@ async def chest_selection(sid, data):
     info: PlayerAction = await validate_data(sid, data, on_error_data, PlayerAction)
     if not info:
         return
-    await do_chest_selection(sid, info.game_id, sio)
+    do_chest_selection(sid, info.game_id, sio)
 
 @sio.event
 async def weapon_action(sid, data):

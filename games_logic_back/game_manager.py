@@ -122,17 +122,17 @@ class GameManager:
         player.weapons.remove(weapon)
         self.leaved_weapons.append(weapon)
         if player.current_weapon_index >= len(player.weapons):
-            player.current_weapon_index = player.current_weapon_index - 1
+            player.current_weapon_index = len(player.weapons) - 1
         return weapon
 
-    async def open_chest(self, id: str):
+    async def open_chest(self, id: str, open_function: Callable[[StaticObject, Weapon | PrefabData], Awaitable[None]]):
         player = None
         for character in self.environment.characters:
             if character.id == id and character.life > 0:
                 player = character
                 break
         else:
-            return None
+            return
         async with self.static_objects_lock:
             static_ob_list = self.environment.static_objects.copy()
         chests = list(filter(lambda x: x.chest_type is not None and (
@@ -143,8 +143,7 @@ class GameManager:
             async with self.static_objects_lock:
                 self.environment.static_objects.remove(chest)
             res = self.__get_and_put_reward(chest.chest_type, player, chest.x, chest.y)
-            return chest, res
-        return None
+            await open_function(chest, res)
     
     munition_info = {
         "submachine": (250, 5),
@@ -158,7 +157,7 @@ class GameManager:
             current_weapon = player.weapons[player.current_weapon_index]
             to_add = 60 if current_weapon.remaining_munition + 60 <= current_weapon.max_munition else current_weapon.max_munition - current_weapon.remaining_munition
             current_weapon.remaining_munition += to_add
-            return current_weapon
+            return player
         elif chest_type == 'health':
             to_add = 40 if player.life + 40 <= player.max_life else player.max_life - player.life
             player.life += to_add
@@ -327,7 +326,7 @@ class GameManager:
                 current_weapon = character.weapons[character.current_weapon_index]
                 if current_weapon.remaining_munition == 0:
                     return None, None
-                data = self.__do_prefab_attack(character, "shoot", current_weapon.bullet_damage, is_enemy=False)
+                data = self.__do_prefab_attack(character, current_weapon.type, current_weapon.bullet_damage, is_enemy=False)
                 current_weapon.remaining_munition -= 1
                 return data, character
         return None, None
